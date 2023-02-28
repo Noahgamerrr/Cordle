@@ -1,47 +1,53 @@
+#ifndef MAP_H
+#define MAP_H
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
+#include <string.h>
+#include <stdbool.h>
 
-struct Map {
-    int map_size;
-    struct Entry* entries;
-} Map_init = {0, NULL};
-
-struct Entry {
-    void* key;
-    void* value;
+//Declaration of the enum type which enumerates data types saved in the map
+enum type {
+    INTEGER,
+    CHARACTER,
+    STRING,
+    FLOAT,
+    DOUBLE,
+    UNSIGNED_CHARACTER,
+    UNSIGNED_INTEGER,
+    SHORT,
+    UNSIGNED_SHORT,
+    LONG,
+    LONG_LONG,
+    UNSIGNED_LONG,
+    UNSIGNED_LONG_LONG,
+    LONG_DOUBLE
 };
 
-static void mapset(struct Map map, void* key, void* value) {
-    for (int i = 0; i < map.map_size; i++) {
-        if (*(char*)map.entries[i].key == *(char*)key) {
-            free(map.entries[i].value);
-            map.entries[i].value = value;
-            return;
-        }
-    }
-}
+typedef struct mym Map;
 
-void* mapget(struct Map map, void* key) {
-    for (int i = 0; i < map.map_size; i++) {
-        if (*(char*)map.entries[i].key == *(char*)key) return map.entries[i].value;
-    }
-    return NULL;
-}
+typedef struct mye Entry;
 
-void* mapgetordefault(struct Map map, void* key, void* def) {
-    void* result = mapget(map, key);
-    if (result != NULL) return result;
-    return def;
-}
+Map* mapcreate(enum type key_type, enum type value_type);
+bool mapempty(Map *map);
+void* mapget(Map *map, void* key);
+void* mapgetordefault(Map *map, void* key, void* def);
+bool mapcontainskey(Map *map, void* key);
+bool mapcontainsvalue(Map *map, void* value);
+void mapput(Map *map, void* key, void* value);
+bool mapputifabsent(Map *map, void* key, void* value);
+size_t mapsize(Map *map);
+void** mapkeys(Map *map);
+void** mapvalues(Map *map);
+void* mapremove(Map *map, void* key);
+bool mapremovepair(Map *map, void* key, void* value);
+void* mapreplace(Map *map, void* key, void* value);
+bool mapreplacepair(Map *map, void* key, void* old_value, void* value);
+void mapforeach(Map *map, void (*operation)(void*, void*));
+void* mapmerge(Map *map, void *key, void *value, void (*operation)(void*, void*));
+void* mapcompute(Map *map, void* key, void (*operation)(void*, void*));
+void mapclear(Map *map);
+void mapfree(Map *map);
 
-struct Map mapput(struct Map map, void* key, void* value) {
-    if (mapget(map, key) == NULL) {
-        map.map_size++;
-        if (map.map_size == 1) map.entries = (struct Entry*)malloc(sizeof(struct Entry));
-        else map.entries = (struct Entry*)realloc(map.entries, map.map_size*sizeof(struct Entry));
-        map.entries[map.map_size - 1].key = key;
-        map.entries[map.map_size - 1].value = value;
-    } else mapset(map, key, value);
-    return map;
-}
+#endif

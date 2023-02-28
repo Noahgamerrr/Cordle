@@ -21,26 +21,27 @@ char* read_word() {
     return word;
 }
 
-void init_map(struct Map* map) {
-    char *word = read_word();
+void init_map(Map* map) {
+    char *word = "hallo";
     printf("%s\n", word);
     for (size_t i = 0; i < strlen(word); i++) {
         char *current_char = malloc(sizeof(char));
         int *value = malloc(sizeof(int));
         *current_char = word[i];
         *value = 0;
-        *value = (*(int*)mapgetordefault(*map, current_char, value)) + 1;
-        *map = mapput(*map, current_char, value);
+        *value = (*(int*)mapgetordefault(map, current_char, value)) + 1;
+        mapput(map, current_char, value);
     }
     free(word);
 }
 
 int main() {
-    struct Map map = Map_init;
-    init_map(&map);
+    Map *map = mapcreate(CHARACTER, INTEGER);
+    init_map(map);
     char* test = malloc(sizeof(char));
-    *test = 'o';
+    *test = 'a';
     printf("%d", *(int*)mapget(map, test));
     free(test);
+    mapfree(map);
     return 0;
 }
