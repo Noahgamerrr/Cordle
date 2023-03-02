@@ -367,6 +367,7 @@ void mapclear(Map *map) {
 */
 void mapfree(Map *map) {
     free(map->entries);
+    map->entries = NULL;
     free(map);
 }
 
@@ -377,7 +378,9 @@ void mapfree(Map *map) {
 static void entryfree(Map *map) {
     for (size_t i = 0; i < mapsize(map); i++) {
         free(map->entries[i].key);
+        map->entries[i].key = NULL;
         free(map->entries[i].value);
+        map->entries[i].value = NULL;
     }
 }
 

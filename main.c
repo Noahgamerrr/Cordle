@@ -31,11 +31,10 @@ void cls() {
 }
 
 void freeattempts() {
-    for (int i = 0 ; i < ATTEMPS; i++) {
+    for (int i = 0; i < ATTEMPS; i++) {
         free(attempts[i]);
         attempts[i] = NULL;
     }
-    free(attempts);
 }
 
 void yellow() {
@@ -132,6 +131,10 @@ void init_lettermap() {
     lettermap[25] = 'm';
 }
 
+void clearcolours() {
+    for (int i = 0; i < ALPHABET_LENGTH; i++) lettercolour[i] = 0;
+}
+
 void print_keyboard() {
     for (int i = 0; i < ALPHABET_LENGTH; i++) {
         draw_colour(i);
@@ -198,11 +201,6 @@ void print_attempts() {
 }
 
 void run_game() {
-    int allocated = 0;
-    if (!allocated) {
-        attempts = malloc(ATTEMPS * sizeof(char*));
-        allocated = 1;
-    }
     while (tries <= ATTEMPS && !haswon) {
         int attempted = 0;
         char* attempt;
@@ -214,44 +212,70 @@ void run_game() {
         printf("%s\n", word);
         print_attempts();
         print_keyboard();
-        if (haswon) {
-            printf("You've won!");
-            free(attempt);
-            attempt = NULL;
-        } else if (tries != ATTEMPS) {
+        if (haswon) printf("You've won!\n");
+        else if (tries != ATTEMPS) {
             printf("Enter your next guess: ");
             gets(attempt);
             while (strlen(attempt) != WORD_LENGTH - 1) {
                 printf("Invalid length of word. Enter your next guess: ");
                 gets(attempt);
             }
-        } else {
-            printf("Wrong, the word was: %s", word);
-            free(attempt);
-            attempt = NULL;
-        }
+        } else printf("Wrong, the word was: %s", word);
         attempts[tries] = attempt;
         tries++;
     }
+}
+
+int menu() {
+    int choice = 0;
+    printf("/----------Cordle----------\\\n");
+    printf("|0. Leave                  |\n");
+    printf("|1. Play                   |\n");
+    printf("\\--------------------------/\n");
+    printf("Please choose: ");
+    scanf("%d", &choice);
+    getchar();
+    while (choice < 0 || choice > 1) {
+        printf("\nInvalid choice\n");
+        printf("Please choose: ");
+        scanf("%d", &choice);
+        getchar();
+    }
+    return choice;
+}
+
+void resetgame() {
+    freeattempts();
+    mapdeepclear(wordmap);
+    mapdeepclear(guessmap);
+    mapdeepclear(completemap);
+    clearcolours();
+    haswon = 0;
+    tries = 0;
 }
 
 int main() {
     wordmap = mapcreate(CHARACTER, INTEGER);
     guessmap = mapcreate(CHARACTER, INTEGER);
     completemap = mapcreate(CHARACTER, INTEGER);
-    read_word();
-    init_wordmap();
     init_lettermap();
-    cls();
-    run_game();
-    freeattempts();
-    mapvaluefree(wordmap);
-    mapvaluefree(guessmap);
-    mapvaluefree(completemap);
+    attempts = malloc(ATTEMPS * sizeof(char*));
+    while (menu()) {
+        read_word();
+        init_wordmap();
+        cls();
+        run_game();
+        resetgame();
+    }
+    printf("Thanks for playing!");
+    free(attempts);
+    mapdeepfree(wordmap);
+    mapdeepfree(guessmap);
+    mapdeepfree(completemap);
     free(word);
-    attempts = NULL;
     word = NULL;
     wordmap = NULL;
     guessmap = NULL;
+    attempts = NULL;
     return 0;
 }
