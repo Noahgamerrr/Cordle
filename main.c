@@ -1,6 +1,5 @@
 #include <string.h>
 #include <time.h>
-#include <math.h>
 #include "map.h"
 
 #ifdef _WIN32
@@ -16,14 +15,15 @@
 #define ATTEMPS 6
 #define ALPHABET_LENGTH 26
 
-Map *wordmap;
-Map *guessmap;
-Map *completemap;
-char **attempts;
-int tries = 0;
-char* word;
+Map *wordmap = NULL;
+Map *guessmap = NULL;
+Map *completemap = NULL;
+char **attempts = NULL;
+char* word = NULL;
 char lettermap[ALPHABET_LENGTH];
 int lettercolour[ALPHABET_LENGTH];
+int tries = 0;
+int haswon = 0;
 
 void cls() {
     if (os) system("clear");
@@ -168,11 +168,13 @@ void print_attempts() {
         mapvalueclear(guessmap);
         mapvalueclear(completemap);
         fillguessmap(i);
+        int correct = 0;
         for (int j = 0; j < WORD_LENGTH - 1; j++) {
             if (tries > i) {
                 if (attempts[i][j] == word[j]) {
                     green();
                     increasevalue(i, j, completemap);
+                    correct++;
                     if (*(int*)mapget(completemap, &attempts[i][j]) == *(int*)mapget(wordmap, &attempts[i][j])) {
                         lettercolour[get_qwerty_letter(attempts[i][j])] = 3;  
                     } else lettercolour[get_qwerty_letter(attempts[i][j])] = 2;
@@ -191,6 +193,7 @@ void print_attempts() {
             white();
         }
         printf("\n");
+        if (correct == 5) haswon = 1;
     }
 }
 
@@ -200,7 +203,7 @@ void run_game() {
         attempts = malloc(ATTEMPS * sizeof(char*));
         allocated = 1;
     }
-    while (tries <= ATTEMPS) {
+    while (tries <= ATTEMPS && !haswon) {
         int attempted = 0;
         char* attempt;
         if (!attempted) {
@@ -211,7 +214,11 @@ void run_game() {
         printf("%s\n", word);
         print_attempts();
         print_keyboard();
-        if (tries != ATTEMPS) {
+        if (haswon) {
+            printf("You've won!");
+            free(attempt);
+            attempt = NULL;
+        } else if (tries != ATTEMPS) {
             printf("Enter your next guess: ");
             gets(attempt);
             while (strlen(attempt) != WORD_LENGTH - 1) {
@@ -219,8 +226,9 @@ void run_game() {
                 gets(attempt);
             }
         } else {
-            printf("Thanks for playing");
+            printf("Wrong, the word was: %s", word);
             free(attempt);
+            attempt = NULL;
         }
         attempts[tries] = attempt;
         tries++;
