@@ -49,5 +49,9 @@ void* mapmerge(Map *map, void *key, void *value, void (*operation)(void*, void*)
 void* mapcompute(Map *map, void* key, void (*operation)(void*, void*));
 void mapclear(Map *map);
 void mapfree(Map *map);
+void mapdeepclear(Map *map);
+void mapdeepfree(Map *map);
+void mapvalueclear(Map *map);
+void mapvaluefree(Map *map);
 
 #endif

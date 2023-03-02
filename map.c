@@ -20,6 +20,8 @@ typedef struct mye {
 static bool mapkeycmp(enum type key_type, void* map_key, void* key);
 static void mapset(Map *map, void* key, void* value);
 static Entry* mapentries(Map *map);
+static void entryfree(Map *map);
+static void valuefree(Map *map);
 
 /*
     Create a map and returns its pointer
@@ -354,6 +356,7 @@ void* mapcompute(Map *map, void* key, void (*operation)(void*, void*)) {
 */
 void mapclear(Map *map) {
     free(map->entries);
+    map->entries = NULL;
     map->map_size = 0;
 }
 
@@ -365,4 +368,65 @@ void mapclear(Map *map) {
 void mapfree(Map *map) {
     free(map->entries);
     free(map);
+}
+
+/*
+    Frees the key-value pairs from the entries
+    @param map The map from which the pairs need to be freed
+*/
+static void entryfree(Map *map) {
+    for (size_t i = 0; i < mapsize(map); i++) {
+        free(map->entries[i].key);
+        free(map->entries[i].value);
+    }
+}
+
+/*
+    Like mapclear(), but also frees the key-value pairs
+    @param map The map to be cleared
+*/
+void mapdeepclear(Map *map) {
+    entryfree(map);
+    mapclear(map);
+}
+
+/*
+    Like mapfree(), but also frees the key-value pairs
+    @param map The map to be freed
+*/
+void mapdeepfree(Map *map) {
+    entryfree(map);
+    mapfree(map);
+}
+
+/*
+    Frees the values from the map but keeps the key intact
+    (useful if the key are referenced somewhere else)
+    @param map The map from which the values need to be freed
+*/
+static void valuefree(Map *map) {
+    for (size_t i = 0; i < mapsize(map); i++) {
+        free(map->entries[i].value);
+        map->entries[i].value = NULL;
+    }
+}
+
+/*
+    Like mapclear, but also frees the values
+    (useful if the key are referenced somewhere else)
+    @param map The map
+*/
+void mapvalueclear(Map *map) {
+    valuefree(map);
+    mapclear(map);
+}
+
+/*
+    Like mapfree, but also frees the values
+    (useful if the key are referenced somewhere else)
+    @param map The map
+*/
+void mapvaluefree(Map *map) {
+    valuefree(map);
+    mapfree(map);
 }

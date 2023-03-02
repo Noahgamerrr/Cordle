@@ -1,5 +1,6 @@
 #include <string.h>
 #include <time.h>
+#include <math.h>
 #include "map.h"
 
 #ifdef _WIN32
@@ -13,16 +14,28 @@
 #define WORD_LENGTH 6
 #define GUESS_LENGTH 50
 #define ATTEMPS 6
+#define ALPHABET_LENGTH 26
 
 Map *wordmap;
 Map *guessmap;
+Map *completemap;
 char **attempts;
 int tries = 0;
 char* word;
+char lettermap[ALPHABET_LENGTH];
+int lettercolour[ALPHABET_LENGTH];
 
 void cls() {
     if (os) system("clear");
     else system("cls");
+}
+
+void freeattempts() {
+    for (int i = 0 ; i < ATTEMPS; i++) {
+        free(attempts[i]);
+        attempts[i] = NULL;
+    }
+    free(attempts);
 }
 
 void yellow() {
@@ -55,7 +68,7 @@ void read_word() {
     fclose(ptr);
 }
 
-void init_map() {
+void init_wordmap() {
     for (size_t i = 0; i < WORD_LENGTH - 1; i++) {
         char *current_char = malloc(sizeof(char));
         int *value = malloc(sizeof(int));
@@ -66,18 +79,109 @@ void init_map() {
     }
 }
 
+void draw_colour(int idx) {
+    switch (lettercolour[idx]) {
+        case 1:
+            bold_white();
+            break;
+        case 2:
+            yellow();
+            break;
+        case 3:
+            green();
+            break;
+        default:
+            white();
+            break;
+    }
+}
+
+int get_qwerty_letter(char letter) {
+    for (int i = 0; i < ALPHABET_LENGTH; i++) {
+        if (letter == lettermap[i]) return i;
+    }
+    return -1;
+}
+
+void init_lettermap() {
+    lettermap[0] = 'q';
+    lettermap[1] = 'w';
+    lettermap[2] = 'e';
+    lettermap[3] = 'r';
+    lettermap[4] = 't';
+    lettermap[5] = 'y';
+    lettermap[6] = 'u';
+    lettermap[7] = 'i';
+    lettermap[8] = 'o';
+    lettermap[9] = 'p';
+    lettermap[10] = 'a';
+    lettermap[11] = 's';
+    lettermap[12] = 'd';
+    lettermap[13] = 'f';
+    lettermap[14] = 'g';
+    lettermap[15] = 'h';
+    lettermap[16] = 'j';
+    lettermap[17] = 'k';
+    lettermap[18] = 'l';
+    lettermap[19] = 'z';
+    lettermap[20] = 'x';
+    lettermap[21] = 'c';
+    lettermap[22] = 'v';
+    lettermap[23] = 'b';
+    lettermap[24] = 'n';
+    lettermap[25] = 'm';
+}
+
+void print_keyboard() {
+    for (int i = 0; i < ALPHABET_LENGTH; i++) {
+        draw_colour(i);
+        printf("%c ", lettermap[i]);
+        if (i == 9) printf("\n ");
+        else if (i == 18) printf("\n  ");
+        else if (i == 25) printf("\n");
+    }
+    white();
+}
+
+int max(int a, int b) {
+    return a > b ? a : b;
+}
+
+void increasevalue(int i, int j, Map *map) {
+    int* value = malloc(sizeof(int));
+    *value = 0;
+    *value = (*(int*)mapgetordefault(map, &attempts[i][j], value)) + 1;
+    mapput(map, &attempts[i][j], value);
+}
+
+void fillguessmap(int i) {
+    if (tries > i) {
+        for (int j = 0; j < WORD_LENGTH - 1; j++) {
+            if (mapget(wordmap, &attempts[i][j]) != NULL) increasevalue(i, j, guessmap);
+            else if (get_qwerty_letter(attempts[i][j]) != -1) lettercolour[get_qwerty_letter(attempts[i][j])] = 1;
+        }
+    }
+}
+
 void print_attempts() {
     for (int i = 0; i < ATTEMPS; i++) {
-        mapclear(guessmap);
+        mapvalueclear(guessmap);
+        mapvalueclear(completemap);
+        fillguessmap(i);
         for (int j = 0; j < WORD_LENGTH - 1; j++) {
             if (tries > i) {
-                if (attempts[i][j] == word[j]) green();
+                if (attempts[i][j] == word[j]) {
+                    green();
+                    increasevalue(i, j, completemap);
+                    if (*(int*)mapget(completemap, &attempts[i][j]) == *(int*)mapget(wordmap, &attempts[i][j])) {
+                        lettercolour[get_qwerty_letter(attempts[i][j])] = 3;  
+                    } else lettercolour[get_qwerty_letter(attempts[i][j])] = 2;
+                }
                 else if (mapget(wordmap, &attempts[i][j]) != NULL) {
-                    int* value = malloc(sizeof(int));
-                    *value = 0;
-                    *value = (*(int*)mapgetordefault(guessmap, &attempts[i][j], value)) + 1;
-                    mapput(guessmap, &attempts[i][j], value);
-                    if (*(int*)mapget(guessmap, &attempts[i][j]) <= *(int*)mapget(wordmap, &attempts[i][j])) yellow();
+                    if (*(int*)mapget(guessmap, &attempts[i][j]) <= *(int*)mapget(wordmap, &attempts[i][j])) {
+                        lettercolour[get_qwerty_letter(attempts[i][j])] = max(lettercolour[get_qwerty_letter(attempts[i][j])], 2);
+                        yellow();
+                    }
                 }
             }
             printf("[");
@@ -106,6 +210,7 @@ void run_game() {
         cls();
         printf("%s\n", word);
         print_attempts();
+        print_keyboard();
         if (tries != ATTEMPS) {
             printf("Enter your next guess: ");
             gets(attempt);
@@ -113,7 +218,10 @@ void run_game() {
                 printf("Invalid length of word. Enter your next guess: ");
                 gets(attempt);
             }
-        } else printf("Thanks for playing");
+        } else {
+            printf("Thanks for playing");
+            free(attempt);
+        }
         attempts[tries] = attempt;
         tries++;
     }
@@ -122,11 +230,20 @@ void run_game() {
 int main() {
     wordmap = mapcreate(CHARACTER, INTEGER);
     guessmap = mapcreate(CHARACTER, INTEGER);
+    completemap = mapcreate(CHARACTER, INTEGER);
     read_word();
-    init_map();
+    init_wordmap();
+    init_lettermap();
     cls();
     run_game();
-    mapfree(wordmap);
-    mapfree(guessmap);
+    freeattempts();
+    mapvaluefree(wordmap);
+    mapvaluefree(guessmap);
+    mapvaluefree(completemap);
+    free(word);
+    attempts = NULL;
+    word = NULL;
+    wordmap = NULL;
+    guessmap = NULL;
     return 0;
 }
