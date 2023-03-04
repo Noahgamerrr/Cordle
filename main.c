@@ -9,16 +9,18 @@
 #endif
 
 #define MAP_LENGTH 5
-#define FILE_LENGTH 15918
+#define FILE_LENGTH 15919
 #define WORD_LENGTH 6
 #define GUESS_LENGTH 50
 #define ATTEMPS 6
 #define ALPHABET_LENGTH 26
 
+char* wordlist = ".\\words.txt";
+
 Map *wordmap = NULL;
 Map *guessmap = NULL;
 Map *completemap = NULL;
-char **attempts = NULL;
+char *attempts[ATTEMPS];
 char* word = NULL;
 char lettermap[ALPHABET_LENGTH];
 int lettercolour[ALPHABET_LENGTH];
@@ -31,7 +33,7 @@ void cls() {
 }
 
 void freeattempts() {
-    for (int i = 0; i < ATTEMPS; i++) {
+    for (int i = ATTEMPS - 1; i >= 0; i--) {
         free(attempts[i]);
         attempts[i] = NULL;
     }
@@ -59,12 +61,32 @@ void read_word() {
     srand(time(NULL));
     int r = rand() % FILE_LENGTH;
     int i = 0;
-    ptr = fopen(".\\words.txt", "r");
+    ptr = fopen(wordlist, "r");
     do {
         fgets(word, WORD_LENGTH + 1, ptr);
         i++;
     } while (i < r);
     fclose(ptr);
+}
+
+int isguessvalid(char* guess) {
+    FILE* ptr;
+    ptr = fopen(wordlist, "r");
+    char* comp = malloc(WORD_LENGTH * sizeof(char));
+    int valid = 0;
+    int words = 0;
+    do {
+        fgets(comp, WORD_LENGTH + 1, ptr);
+        int equals = 1;
+        for (int i = 0; i < WORD_LENGTH - 1; i++) {
+            if (guess[i] != comp[i]) equals = 0;
+        }
+        if (equals) valid = 1;
+        words++;
+    } while (!valid && words <= FILE_LENGTH);
+    free(comp);
+    fclose(ptr);
+    return valid;
 }
 
 void init_wordmap() {
@@ -157,10 +179,12 @@ void increasevalue(int i, int j, Map *map) {
     mapput(map, &attempts[i][j], value);
 }
 
-void fillguessmap(int i) {
+void prefillguessmap(int i) {
     if (tries > i) {
         for (int j = 0; j < WORD_LENGTH - 1; j++) {
-            if (mapget(wordmap, &attempts[i][j]) != NULL) increasevalue(i, j, guessmap);
+            if (mapget(wordmap, &attempts[i][j]) != NULL) {
+                if (attempts[i][j] == word[j]) increasevalue(i, j, guessmap);
+            }
             else if (get_qwerty_letter(attempts[i][j]) != -1) lettercolour[get_qwerty_letter(attempts[i][j])] = 1;
         }
     }
@@ -170,7 +194,7 @@ void print_attempts() {
     for (int i = 0; i < ATTEMPS; i++) {
         mapvalueclear(guessmap);
         mapvalueclear(completemap);
-        fillguessmap(i);
+        prefillguessmap(i);
         int correct = 0;
         for (int j = 0; j < WORD_LENGTH - 1; j++) {
             if (tries > i) {
@@ -183,6 +207,7 @@ void print_attempts() {
                     } else lettercolour[get_qwerty_letter(attempts[i][j])] = 2;
                 }
                 else if (mapget(wordmap, &attempts[i][j]) != NULL) {
+                    increasevalue(i, j, guessmap);
                     if (*(int*)mapget(guessmap, &attempts[i][j]) <= *(int*)mapget(wordmap, &attempts[i][j])) {
                         lettercolour[get_qwerty_letter(attempts[i][j])] = max(lettercolour[get_qwerty_letter(attempts[i][j])], 2);
                         yellow();
@@ -209,15 +234,15 @@ void run_game() {
             attempted = 1;
         }
         cls();
-        printf("%s\n", word);
         print_attempts();
         print_keyboard();
         if (haswon) printf("You've won!\n");
         else if (tries != ATTEMPS) {
             printf("Enter your next guess: ");
             gets(attempt);
-            while (strlen(attempt) != WORD_LENGTH - 1) {
-                printf("Invalid length of word. Enter your next guess: ");
+            while (strlen(attempt) != WORD_LENGTH - 1 || !isguessvalid(attempt)) {
+                if (strlen(attempt) != WORD_LENGTH - 1) printf("Invalid length of word. Enter your next guess: ");
+                else printf("Invalid word. Enter your next guess: ");
                 gets(attempt);
             }
         } else printf("Wrong, the word was: %s", word);
@@ -259,7 +284,6 @@ int main() {
     guessmap = mapcreate(CHARACTER, INTEGER);
     completemap = mapcreate(CHARACTER, INTEGER);
     init_lettermap();
-    attempts = malloc(ATTEMPS * sizeof(char*));
     while (menu()) {
         read_word();
         init_wordmap();
@@ -268,14 +292,11 @@ int main() {
         resetgame();
     }
     printf("Thanks for playing!");
-    free(attempts);
     mapdeepfree(wordmap);
     mapdeepfree(guessmap);
     mapdeepfree(completemap);
-    free(word);
     word = NULL;
     wordmap = NULL;
     guessmap = NULL;
-    attempts = NULL;
     return 0;
 }

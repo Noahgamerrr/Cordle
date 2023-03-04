@@ -22,6 +22,7 @@ static void mapset(Map *map, void* key, void* value);
 static Entry* mapentries(Map *map);
 static void entryfree(Map *map);
 static void valuefree(Map *map);
+static void keyfree(Map *map);
 
 /*
     Create a map and returns its pointer
@@ -404,7 +405,7 @@ void mapdeepfree(Map *map) {
 
 /*
     Frees the values from the map but keeps the key intact
-    (useful if the key are referenced somewhere else)
+    (useful if the keys are referenced somewhere else or have already been freed)
     @param map The map from which the values need to be freed
 */
 static void valuefree(Map *map) {
@@ -431,5 +432,37 @@ void mapvalueclear(Map *map) {
 */
 void mapvaluefree(Map *map) {
     valuefree(map);
+    mapfree(map);
+}
+
+/*
+    Frees the keys from the map but keeps the key intact
+    (useful if the values are referenced somewhere else or have already been freed)
+    @param map The map from which the values need to be freed
+*/
+static void keyfree(Map *map) {
+    for (size_t i = 0; i < mapsize(map); i++) {
+        free(map->entries[i].key);
+        map->entries[i].key = NULL;
+    }
+}
+
+/*
+    Like mapclear, but also frees the keys
+    (useful if the key are referenced somewhere else)
+    @param map The map
+*/
+void mapkeyclear(Map *map) {
+    keyfree(map);
+    mapclear(map);
+}
+
+/*
+    Like mapfree, but also frees the keys
+    (useful if the key are referenced somewhere else)
+    @param map The map
+*/
+void mapkeyfree(Map *map) {
+    keyfree(map);
     mapfree(map);
 }
